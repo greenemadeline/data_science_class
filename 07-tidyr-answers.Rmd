@@ -1,0 +1,346 @@
+---
+title: "ANSWERS: Working with untidy and tidy data"
+subtitle: "Data Science for Biologists, Spring 2020"
+author: "Madeline Greene"
+output: 
+  html_document:
+    highlight: tango
+css: static/sjs-style.css
+params:
+  data_path: "data/"
+---
+
+<!-- SETUP CODE CHUNK -->
+```{r setup, include=FALSE}
+## Change the default figure width and height to your liking, but within reason.
+knitr::opts_chunk$set(echo = TRUE, fig.width=6, fig.height=3.5)
+library(tidyverse)
+library(kableExtra) # helpful to print fancy tables in RMarkdown
+theme_set(theme_classic())  ### If you want to set a global theme, do so here
+```
+
+
+# <mark>Questions</mark>
+
+#### Preface Question
+
+Look at the YAML front matter: there is something NEW! Read about params [here](https://rmarkdown.rstudio.com/lesson-6.html). In this case we set a global parameter for the RMarkdown file that corresponds to the path where data lives! We can proceed to use this as a variable like so (always `params$`, like a column in a data frame!). Use this variable for your paths, e.g. `read_csv(paste0(params$data_path, <NAMEOFFILE>))`
+```{r}
+params$data_path
+
+```
+
+#### Question 1
+
+```{r}
+# Code chunk to read in and examine the data with head()
+read_csv(paste0(params$data_path, "mcv_immunized_percent_of_one_year_olds.csv")) -> mcv_immunized #other way is to rename the name of the file 
+head(mcv_immunized) #just viewing head
+```
+
+
+```{r}
+# Code chunk to convert data to tidy
+mcv_immunized %>%
+  pivot_longer(`1980`:`2011`, names_to = "year", values_to = "percent") -> tidymcv
+
+tidymcv
+
+
+```
+#### Question 2
+
+
+```{r, fig.width = 11, fig.height = 6}
+# Code chunk to plot the data
+tidymcv %>%
+  filter(country %in% c("Brazil","Central African Republic")) %>%
+  #comparing these two countries
+  ggplot(aes(x =year, y = percent, group = country)) +
+  geom_line() + 
+  geom_point() +   
+  facet_wrap(~country, nrow=2)+
+  #nrow = overtop of eachother
+  theme(strip.background = element_rect(fill = "coral")) +
+  labs(x = "Year", y = "Percent")
+  
+```
+
+<answer>
+Based on this line graph, it is evident that Brazil has an overall higher percent of vaccinations. Central African Republic has a few years where it climbed in percentage from 1987-1990, then dropped down at 1992, and remained pretty steady at around 50% until 2011. Brazil is mainly over 75% vaccinated, almost reaching a full 100%.
+</answer>
+
+#### Question 3
+
+
+```{r}
+# Code chunk to read in and examine the data with head()
+read_csv(paste0(params$data_path, "dtp3_immunized_percent_of_one_year_olds.csv")) -> dtp3_immunized
+dtp3_immunized
+head(dtp3_immunized)
+
+```
+
+
+```{r}
+# Code chunk to convert data to tidy and combine with question 1 data
+dtp3_immunized %>%
+  pivot_longer(`1980`:`2011`, names_to = "year", values_to = "percent") -> tidy_dtp3
+  #need back ticks to make it work
+tidy_dtp3 %>%
+  mutate(vaccine = "dtp3") -> dtp3_vaccine
+
+tidymcv %>%
+  mutate(vaccine = "mcv") -> mcv_vaccine
+
+bind_rows(mcv_vaccine, dtp3_vaccine) -> new_vaccine
+#have the same labels so can bind
+new_vaccine
+
+new_vaccine %>%
+  mutate(year = as.numeric(year)) -> numeric_vaccine
+  #want year
+numeric_vaccine
+
+
+
+```
+
+```{r}
+# Code chunk to plot the data
+numeric_vaccine %>%
+  filter(country == "Brazil") %>%
+  #selected Brazil
+  ggplot(aes(x = year, y= percent, fill = vaccine)) +
+  geom_col(position = "dodge") + 
+  #wanted the columns next to eachother
+  labs(x = "Year", y = "Percent", fill = "Vaccine") +
+  scale_fill_brewer(palette= "Dark2")
+
+```
+
+<answer>
+It is evident that in this figure, it shows that in the country Brazil, from 1980 to 2010 roughly, the percent of vaccinations definitely increased. It increased significantly around 1990.
+</answer>
+
+#### Question 4
+
+
+```{r}
+# Code chunk to read in and examine the data with head()
+read_csv(paste0(params$data_path, "seals.csv")) -> seals
+seals
+head(seals)
+```
+
+
+```{r}
+# Code chunk for distributions (violin, sina, etc.)
+# If sina make sure to load `ggforce()` in SETUP CHUNK!
+
+seals %>%
+  ggplot(aes(x = feeding, y = oxygen_use)) +
+  geom_violin() +
+  #violin plot shows distribution
+  labs(x = "Feeding", y = "O2 Usage ")
+ 
+  
+```
+
+```{r}
+# Code chunk for data un-tidying and scatterplot
+
+seals %>%
+  pivot_wider(names_from = "feeding", values_from = "oxygen_use") -> seals_feeding
+
+seals_feeding %>%
+  ggplot(aes(x = No, y = Yes)) +
+  geom_point() +
+  geom_abline(col = "pink") +
+  #added y=x line
+  labs( x = "Oxygen Use When NOT Feeding", y = "Oxygen Use When Feeding") +
+  ylim(25,150) +
+  #made y limit
+  xlim(25,150) +
+  #made x limit
+  annotate("text", x = 60, y = 50, label = "y=x")
+  #added text annotation
+  
+
+```
+
+<answer>
+Based on both figures, the oxygen use is increased WHEN feeding. You can tell this by the scatterplots positive increase. You can also tell this by the violin plot since the distribution is higher for oxygen use when feeding.
+</answer>
+
+#### Question 5
+
+
+```{r}
+# Code chunk to read in and examine the data with head()
+read_csv2(paste0(params$data_path, "planets.csv")) -> planets
+planets
+head(planets)
+
+```
+
+
+```{r}
+# Code chunk for tidying
+# HINT: it's literally just piping data into separate_rows twice, one for the column given in the question, and for the second you need to figure out the column.
+## DO NOT OVERCOMPLICATE THIS QUESTION.
+
+planets %>%
+  separate_rows(terrain) %>%
+  #separated terrain because had multiple names
+  separate_rows(climate) ->tidy_planets
+  #separated climate because had multiple names
+head(tidy_planets)
+```
+
+
+#### Question 6
+
+```{r}
+# Code chunk for allllll the wrangling and tidying
+# should END UP as a single piped command - but build it up LINE AT A TIME!
+
+tidy_planets %>%
+  separate(edited, c("edited_date", "edited_time"), sep = "T") %>%
+  #need to separate with "T" because that is where it separates the date and time
+  mutate(ratio_period_rotation_orbital = rotation_period/orbital_period) %>%
+  #dividing is way for ratio
+  unite("name_pop", name, population, sep = "-") %>%
+  #sep with a dash
+  filter(terrain == "mountains") %>%
+  #only want terrain
+  arrange(desc(ratio_period_rotation_orbital)) -> mountain_planets
+  #want it descending
+
+mountain_planets
+  
+```
+
+
+#### Question 7
+
+
+```{r}
+## defines each column as an array
+tibble(
+  color        = c("blue", "green", "turquoise"),
+  male         = c(25, 36, 52),
+  female       = c(28, 17, 33),
+  species_abbr = c("sp1", "sp1", "sp1")
+) -> frogs_sp1
+
+## defines tibble in a format like the tibble would end up appearing
+## spacing is helpful!
+tribble(
+  ~color, ~male, ~female, ~species_abbr,
+  "orange", 13,   17,    "sp2",
+  "red",    45,   36,    "sp2",
+  "pink",  31,    25,    "sp2"
+) -> frogs_sp2
+
+
+## Like strategy one
+tibble(
+  species_name = c("Frogus firstus", "Frofus secondus"),
+  species_abbr = c("sp1", "sp2")
+) -> species_names
+
+### ADD CODE HERE TO PRINT OUT THESE THREE DATASETS!!! YOU HAVE TO LOOK AT THEM TO USE THEM!!
+
+frogs_sp1
+
+frogs_sp2
+
+species_names
+```
+
+
+
+```{r}
+# Code chunk to tidy and combine the three datasets
+
+frogs_sp1 %>%
+  bind_rows(frogs_sp2)%>%
+  #the data is more or less the same so binded the rows
+  left_join(species_names) -> tidy_frog
+  #tried right and left join and didn't see much of a difference so just left join
+
+tidy_frog #printed to make sure looked okay
+
+tidy_frog %>%
+  pivot_longer(male:female, names_to = "Frog_sex", values_to = "Frog_count") %>%
+  select(-species_abbr) %>%
+  #told to remove this column
+  separate(species_name, c("Genus", "Species")) -> frog_tidy_tibble
+
+frog_tidy_tibble
+
+```
+
+```{r}
+# Code chunk to for dplyr task 1
+frog_tidy_tibble %>%
+  filter(Species == "firstus") %>%
+  #filtered by species : Frogus firstus
+  filter(Frog_sex == "female") %>%
+  filter(color %in% c("blue", "green")) 
+
+#blue have more
+
+```
+
+```{r}
+# Code chunk to for dplyr task 2
+frog_tidy_tibble %>%
+  filter(Frog_sex == "male") %>%
+  #only wanted male
+  group_by(Species) %>%
+  #wanted to show species
+  summarize(sum_males = sum(Frog_count))
+  #wanted overall sum between species
+
+```
+
+```{r}
+# Code chunk to for dplyr task 3
+frog_tidy_tibble %>%
+  filter(Species == "secondus") %>%
+  select( -Genus) %>%
+  select(- Species) %>%
+  pivot_wider(names_from = "Frog_sex", values_from = "Frog_count") %>%
+  mutate(ratio_frogs = male/female) %>%
+  select(color, ratio_frogs) %>% 
+  arrange(desc(ratio_frogs))
+
+#Red Frogus secondus have the highest male:female ratio!!
+
+
+```
+
+
+
+#### Question 8
+
+```{r}
+# Code chunk for kable()
+
+frog_tidy_tibble %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "hover", full_width = F, font_size = 10, position = "left") %>%
+  #wanted to be able to hover over each line, towards left of page
+  row_spec(1:2, color = "blue") %>%
+  row_spec(3:4, color = "green") %>%
+  row_spec(5:6, color = "turquoise") %>%
+  row_spec(7:8, color = "orange") %>%
+  row_spec(9:10, color = "red") %>%
+  row_spec(11:12, color = "pink") -> kable_frog
+  #made each color word the color it is
+
+kable_frog
+```
+
