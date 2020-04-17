@@ -55,7 +55,6 @@ ggplot(rowan, aes(x = altitude, y = respiratory_rate)) +
   geom_point()
 ```
 
-
 Now that you have confirmed the relationship is linear (hint: it is linear), build your linear model. *BEFORE you examine its output*, evaluate whether the model residuals were normally distributed:
 
 ```{r}
