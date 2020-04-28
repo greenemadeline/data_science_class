@@ -1,0 +1,163 @@
+---
+title: "Clustering and PCA"
+subtitle: "Data Science for Biologists, Spring 2020"
+author: "Madeline Greene"
+output: 
+  html_document:
+    highlight: tango
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+## SET YOUR SEED BELOW!!! Make it YOUR SEED! Uncomment the line, and add your chosen seed number into the parentheses
+set.seed(1224)
+```
+
+## Instructions
+
+Standard grading criteria apply. And...
+
++ Make sure you set your seed
++ Proofread to submit YOUR OWN WORDS!!
++ Make sure all bullets properly render in the knitted HTML. **YOU WILL LOSE POINTS FOR BULLETED LISTS THAT DO NOT TURN OUT PROPERLY IN THE HTML!!** 
++ Remember that `#` do NOT make comments in markdown. They make HEADERS!! You need to use HTML comments to have comments in your text that don't appear in the knitted HTML. For example, the line below does not appear in html.
+
+<!-- This is an actual comment in markdown. -->
+
+## The data
+
+We will be using a dataset of olives collected from various regions of Italy. The data gives the percentage of different fatty acids that comprise the oil in the olives. [Source](https://rdrr.io/cran/dslabs/man/olive.html)
+
+```{r, collapse=T}
+olives <- read_csv("https://raw.githubusercontent.com/sjspielman/datascience_for_biologists/master/data/olives.csv")
+dplyr::glimpse(olives)
+```
+
+
+## Part 1: Clustering
+
+Perform TWO k-means cluster analysis, once with **k=3** and once with **k=5**. 
+
+```{r}
+## Perform two clustering analyses here with k=3 and k=5, separately.
+
+# k=3 clustering
+olives %>%
+  select(-region, -area) %>%
+  kmeans(3) -> olives_k3
+
+# k=5 clustering
+olives %>%
+  select(-region, -area) %>%
+  kmeans(5) -> olives_k5
+
+```
+
+
+
+For each analysis, make a SINGLE FIGURE for each clustering analysis (two figures total). Choose your own adventure for each figure! You should explain per figure: a) Why did you decide to visualize the clustering using this particular figure? (~1 sentence) and b) What insights (if any!) does this figure provide (1-2 sentences)? Answer in the bullets below the given figure. 
+
+**You should not make two identical figures - they need to be _somewhat_ different.** For example, two barplots showing the relationship between clusters and regions is a no-go. Two scatterplots but with different x-axis and y-axis variables on the axes is ok! Two boxplots (violin, den sity, histogram, sina, jitter...) but with a different focal variable is ok! Either way, your figure MUST show the clusters.
+
+```{r}
+## Figure for k=3 including all associated wrangling
+
+olives %>%
+  mutate(k3_cluster = factor(olives_k3$cluster)) %>%
+  #plotting region by palmitic values and coloring them by the k3 cluster
+  ggplot(aes(x = linoleic, y = palmitic, color = k3_cluster )) +
+  geom_point() +
+  #changed colors to make more appealing to eye
+  scale_color_brewer(palette = "Set2") +
+  labs(x = "Region", 
+       y = "Palmitic",
+       color = "K3 Cluster") 
+  
+  
+```
+
++ I chose this type of figure to show the individual points per region and to see where the distribution was for the different K3 cluster values. 
++ The trend that I see is that region and palmatic have a positive linear relationship. As the region and palmitic increase, the clusters change from 3 to 1 to 2.
+
+
+```{r}
+## Figure for k=5 including all associated wrangling
+
+olives %>%
+  mutate(k5_cluster = factor(olives_k5$cluster)) %>%
+  #plotting region by palmitic values and coloring them by the k3 cluster
+  ggplot(aes(x = region, fill = k5_cluster )) +
+  geom_bar() +
+  #changed colors to make more appealing to eye
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "region", 
+       fill = "K5 Cluster") 
+```
+
++ I chose this type of figure to show the different distributions of the cluster values per region. It allows me to see the count distribution per region. 
++ This type of figure allows me to see that the majority of Northern Italy consists of Clusters 3 and 4 and does not include cluster 2. For Sardinia, it's majority is cluster 5 with a little count of cluster 2. Lastly, Southern Italy has the most diverse spread of all of the clusters, but the largest cluster is 2. 
+
+## Part Two: PCA
+
+Perform a principal components analysis on this dataset, and create TWO figures from your PCA. Each figure should have a brief explanation as a bullet below it. For each figure, your should be labeled to include information about how much variation the given PC explains in the data.
+
+```{r}
+## Code to perform PCA goes here
+
+olives %>%
+  select(- region, -area) %>%
+  scale() %>%
+  prcomp() -> olives_pca
+
+```
+
+1. But first, use code to answer this question! Intepret how variables in the initial dataset **load** on the PCs by examining, you guessed it, the loadings. In the bullets below, state which SINGLE variable load most strongly on PC1 and PC2 each, and which SINGLE variable loads most weakly on PC1 and PC2.
+
+```{r}
+## Code to examine loadings goes here
+olives_pca$rotation
+```
+
++ **Strongest PC1 loading: oleic = -0.49417494**
++ **Strongest PC2 loading: linolenic = -0.60483760 **
++ **Weakest PC1 loading: stearic = -0.09864471**
++ **Weakest PC2 loading: palmitic = 0.04958406**
+
+2. Plot PC2 against PC1 (PC2 is on Y and PC1 is on X) as a scatterplot, where you use color to distinguish among **olive region** (NOT area!). Make sure to show ellipses for each grouping. Do NOT include loading arrows. In the bullet below, _explain in 2-3 sentences_ if and how either PC1 or PC2 discriminates olive area You may write a bulleted list *as long as it renders properly.*
+
+```{r}
+## Code to make this figure goes here
+
+as_tibble(olives_pca$x)%>%
+  mutate(region = olives$region) %>%
+  ggplot(aes(x = PC1, y = PC2, color = region)) +
+  geom_point() +
+  stat_ellipse()
+  
+```
+
++ This figure shows that each region has its distinct sections. There is minimal overlapping betwen regions. 
+
+2. Plot PC2 against PC1 as a scatterplot, where you use color to distinguish among **olive area** (the other categorical column!). Make sure to show ellipses for each grouping. Do NOT include loading arrows. In the bullet below, _explain in 2-3 sentences_ if and how either PC1 or PC2 discriminates olive region. You may write a bulleted list *as long as it renders properly.*
+
+
+
+```{r}
+## Code to make this figure goes here
+
+as_tibble(olives_pca$x)%>%
+  mutate(area = olives$area) %>%
+  ggplot(aes(x = PC1, y = PC2, color = area)) +
+  geom_point() +
+  stat_ellipse()
+  
+```
+
++ This figure allows us to notice that there are distint groups/sections across PC1 and PC2. It is evident that common areas are close to eachother such as East and West Liguria, North and south Apulia, and Coast and Inland Sardinia. Despite being different areas, since they are relatively close on the map, they represent similar values. 
+
+
